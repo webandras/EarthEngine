@@ -1,0 +1,128 @@
+// A TÁJÖKOLÓGIAI KONFERENCIÁRA KÉSZÍTETT POSZTEREMHEZ TARTOZÓ SZKRIPT
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ * +++++    A Google Earth Engine bemutatása az érdeklõdõknek    ++++++
+ * +++++                Szerzõ: Gulácsi András, 2017             ++++++
+ * +++++              E-mail: gulandras90@gmail.com              ++++++
+ * +++++    GitHub: https://github.com/SalsaBoy990/EarthEngine   ++++++
+ * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ */
+
+
+//  I. SZERVER KONTRA KLIENS
+
+var kliensSztring = '2017-04-01'; // kliens oldali objektum
+print(typeof kliensSztring); // => string
+
+/* Az ee.Date() kontruktorának meghívásával becsomagoljuk a kliensSztring
+ * tartalmát az ee.Date proxy objektumba. */
+var szerverSztring = ee.Date(kliensSztring); // szerver oldali objektum
+print('Ez egy EE objektum?',
+          szerverSztring instanceof ee.ComputedObject); // => true
+
+/* Az MNDWI (módosított normalizált differenciált vízindex)
+ * számítására írt függvény, ami hozzáad egy sávot a képhez.
+ * MNDWI = (látható zöld - középsõ infravörös sáv) / (látható zöld + középsõ infravörös sáv)
+ * középsõ infravörös sáv: 2,1 mikron hullámhossznál */
+function addMNDWIBand(kep)
+{
+  return function(kep)
+  {
+    return kep.addBands(
+      kep.normalizedDifference(['B3', 'B7']).rename("MNDWI"));
+  };
+}
+
+/* Landsat 8 kollekció szûrése, NDVI számítása az összes képre a map()
+ * metódus segítségével for ciklus helyett! */
+var landsat = 'LANDSAT/LC8_L1T_TOA_FMASK';
+
+// Pont létrehozása koordinátapárból
+var point = ee.Geometry.Point(19.064, 47.547);
+
+var szurtKollekcio = ee.ImageCollection(landsat)
+        // Földrajzi koordináták alapján szûrés: a képszelvény kiválasztása.
+        .filterBounds(point)
+        // A két idõpont közti képek leválogatása.
+        .filterDate('2016-08-01', '2016-08-31')
+        // Az összes képre a szûrt képkollekcióban lefut az NDVI számítása!
+        .map(addMNDWIBand(landsat))
+        // Növekvõ sorrend a %-os felhõborítás alapján.
+        .sort('CLOUD_COVER', true);
+
+ /* Az elsõ kép leválogatása, mivel a felhõborítás tulajdonság
+  * alapján növekvõ sorba rendezett mûholdképek közül annak a
+  * legkisebb a felhõborítása. */
+var first = szurtKollekcio.first();
+// az ee.Image() konstruktorát meghívjuk, mert használni fogjuk a képet.
+var landsatKep = ee.Image(first);
+
+
+
+// II. KÉSLELTETETT VÉGREHAJTÁS
+
+ // A kép tulajdonságainak a konzolra történõ kiíratása.
+print(landsatKep);
+
+/* A mintaterület (Felsõ-Kiskun Tavak), amivel vágni fogjuk a képet.
+ * egy téglalapot hozunk létre a sarokponti koordinátákból */
+var mintaterulet = ee.Geometry.Rectangle(19.1223, 46.7513, 19.2341, 46.8884);
+
+// Megjelenítési beállítások / sávok / min és max értékek / a réteg neve.
+var vizParams = {bands: ['B5', 'B4', 'B3'], min: 0, max: 0.5,
+  gamma: 1.3};
+
+// A 11. piramisszinthez tartozó felbontás 76 méter.
+Map.setCenter(19.17826, 46.81987, 11);
+// Mûholdkép hozzáadása a térképnézethez a clip() metódussal vágjuk ki a mintaterületet.
+Map.addLayer(landsatKep.clip(mintaterulet), vizParams, 'Landsat 8 hamis színes kompozit');
+
+// Az MNDWI sáv hozzáadása a térképhez.
+var mndwiVis = {
+  min: -0.3, max: 1, palette:["00ae06","ff9368", "0e4aff"]
+};
+Map.addLayer(landsatKep.select('MNDWI')
+                .clip(mintaterulet), mndwiVis, 'MNDWI');
+
+
+
+// III. A LÉPTÉK ÉS A VETÜLETEK KEZELÉSE
+
+// Az elsõ sáv kiválasztása; vetület, lépték kiírása a konzolra.
+var kep = landsatKep.select(0);
+print('Vetület, crs, és crs_transform:', kep.projection());
+print('Felbontás méterben:', kep.projection().nominalScale());
+
+
+
+// IV. AZ ADATOK EXPORTÁLÁSA ÉS IMPORTÁLÁSA
+
+/* Mindig adjuk meg az eredeti felbontást!
+A kép eredeti vetületébe (EPSG:32634) menti. */
+Export.image.toDrive(
+{
+  image: landsatKep.select("MNDWI"),
+  description: 'MNDWIkep',
+  scale: 30,
+  region: mintaterulet
+});
+
+
+/* A CLC2012 adatbázis szerinti vizes élõhelyek, tavak és folyók importálása.
+ * Az adatokat már feltöltöttem egy nyilvános Fusion Table-be.
+ * Az adatokat ESRI shapefile-ból Keyhole Markup Language (.kml) formátumba
+ * konvertáltam (WGS 84-be, mert csak azt támogatja), majd feltöltöttem a
+ * Google szerverére. Ezen a linken lehet Fusion Table-t létrehozni:
+ * https://www.google.com/fusiontables/DataSource?dsrcid=implicit
+ * Google Fiókkal rendelkezni kell. */
+ 
+// Az id/azonosító alapján tölthetjük be: 'ft:azonosito' formában.
+// Egy vektoros kollekciót hozunk létre.
+var adat = ee.FeatureCollection('ft:1EfrAPLOV_vEIZ4pXXxGogoiKopqu6nY0xv6BN2WK');
+
+// Szûrõk segítségével a CLC-kód alapján lekérdezéseket hajthatunk végre.
+var wetlands = adat.filter(ee.Filter.rangeContains('clc2012',400, 500));
+var water_bodies = adat.filter(ee.Filter.rangeContains('clc2012',500, 512));
+
+Map.addLayer(wetlands, { color: '#7500ff'}, 'Wetlands');
+Map.addLayer(water_bodies, { color: 'cyan'}, 'Lakes, rivers');
+
