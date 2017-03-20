@@ -1,0 +1,32 @@
+var kliensSztring = '2017-04-01';
+print(typeof kliensSztring); //=> Sztring típusú!
+// Az ee.Date() konstruktorát meghívjuk.
+var szerverSztring = ee.Date(kliensSztring);
+print('Ez egy EE objektum?',
+    szerverSztring instanceof ee.ComputedObject); //=> Igaz!
+
+// Normalizált Differenciált Vegetációindex számítása.
+function addNDVIBand(kep)
+{
+  return function(kep)
+  {
+    return kep.addBands(kep.normalizedDifference(['B5', 'B4'])
+              .rename('NDVI'));
+  };
+}
+
+/* Landsat 8 kollekció szûrése, NDVI számítása az
+ * összes képre a map() metódussal a for ciklus helyett. */
+var point = ee.Geometry.Point(19.064, 47.547);
+var landsat = 'LANDSAT/LC8_L1T_TOA_FMASK';
+
+var szurtKollekcio = ee.ImageCollection(landsat)
+        .filterBounds(point)
+        .filterDate('2016-08-01', '2016-08-31')
+        .map(addNDVIBand(landsat))
+        // Növekvõ sorrend a %-os felhõborítás alapján.
+        .sort('CLOUD_COVER', true);
+
+// Az elsõ kép leválogatása (a legkevesebb felhõ).
+var first = szurtKollekcio.first();
+var landsatKep = ee.Image(first);

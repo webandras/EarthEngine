@@ -1,0 +1,7 @@
+// Az elsõ sáv kiválasztása; vetület, lépték kiírása.
+var kep = landsatKep.select(0);
+print('Vetület, crs, és crs_transform:',
+                              kep.projection());
+print('Felbontás méterben:',
+                kep.projection().nominalScale());
+

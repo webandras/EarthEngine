@@ -1,0 +1,26 @@
+// Mindig adjuk meg az eredeti felbontást! A kép eredeti vetületébe (WGS 84 / UTM) menti.
+Export.image.toDrive({
+  image: landsatKep.select("NDVI"),
+  description: 'NDVIkep',
+  scale: 30,
+  region: mintaterulet
+});
+
+/* A CLC2012 adatbázis szerinti vizes élõhelyek, tavak és folyók importálása.
+ * Az adatokat már feltöltöttem egy nyilvános Fusion Table-be.
+ * Az adatokat ESRI shapefile-ból Keyhole Markup Language (.kml) formátumba
+ * konvertáltam (WGS 84-be, mert csak azt támogatja), majd feltöltöttem a
+ * Google szerverére. Ezen a linken lehet Fusion Table-t létrehozni:
+ * https://www.google.com/fusiontables/DataSource?dsrcid=implicit
+ * Google Fiókkal rendelkezni kell. */
+ 
+// Az id/azonosító alapján tölthetjük be: 'ft:azonosito' formában.
+// Egy vektoros kollekciót hozunk létre.
+var adat = ee.FeatureCollection('ft:1EfrAPLOV_vEIZ4pXXxGogoiKopqu6nY0xv6BN2WK');
+
+// Szûrõk segítségével a CLC-kód alapján lekérdezéseket hajthatunk végre.
+var wetlands = adat.filter(ee.Filter.rangeContains('clc2012',400, 500));
+var water_bodies = adat.filter(ee.Filter.rangeContains('clc2012',500, 512));
+
+Map.addLayer(wetlands, { color: '#7500ff'}, 'Wetlands');
+Map.addLayer(water_bodies, { color: 'cyan'}, 'Lakes, rivers');
