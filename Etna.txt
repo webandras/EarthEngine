@@ -1,4 +1,37 @@
-/* Kitörölt rész! */
+var isLeapYear = function(year)
+{
+  return ((year % 4 === 0 && year !== 100) || year % 400 === 0);
+};
+
+var getDaysInMonth = function(year, month)
+{
+  var leapYear = isLeapYear(parseInt(year, 10));
+  var daysInMonth = 0;
+  var monthNumber = parseInt(month, 10);
+
+  if(monthNumber === 2)
+  {
+    if(leapYear)
+      daysInMonth = 29;
+    else
+      daysInMonth = 28;
+  }
+  else if(monthNumber === 4 || monthNumber === 6 ||
+    monthNumber === 9 || monthNumber === 11)
+  {
+    daysInMonth = 30;
+  }
+  else
+  {
+    daysInMonth = 31;
+  }
+  return (daysInMonth);
+};
+
+
+
+
+/* KitÃ¶rÃ¶lt rÃ©sz! */
 
 var center = etnaArea.centroid();
 print(center);
@@ -11,12 +44,13 @@ var sentinel1 = ee.ImageCollection('COPERNICUS/S1_GRD');
 
 /* Set start and end date for filtering the collection */
 var currentYear = new Date().getFullYear();
-var year = prompt("Add meg az évet 2000 és "+currentYear+" között!", "2016");
-var month = prompt("Add meg a hónapot a havi képek elõállításához!", "07");
-var daysInMonth = prompt("Hány napos a hónap?", "31");
+var year = prompt("Add meg az Ã©vet 2000 Ã©s "+currentYear+" kÃ¶zÃ¶tt!", "2016");
+var month = prompt("Add meg a hÃ³napot a havi kÃ©pek elÅ‘Ã¡llÃ­tÃ¡sÃ¡hoz!", "07");
 
 var start = ee.Date(year+'-'+month+'-01');
-var finish = ee.Date(year+'-'+month+'-'+daysInMonth);
+var finish = ee.Date(year+'-'+month+'-'+getDaysInMonth(year, month));
+
+print(getDaysInMonth(year, month));
 
  /* Filtering based on metadata properties */
 var vh = sentinel1
