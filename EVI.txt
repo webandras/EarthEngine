@@ -1,0 +1,231 @@
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ * +++++   MODIS MOD13A1 / MOD13Q1 EVI PROCESSING TOOL 1.0b  ++++++
+ * +++++   AUTHOR: ANDRÁS GULÁCSI                            ++++++
+ * +++++   DATE: March 28, 2017                             ++++++
+ */
+
+
+/* This is a very simple function taken from the tutorials.
+ * It works fine, and can be used for any value extraction from bitfields.
+ * Returns an image containing just the specified QA bits.
+ *
+ * Args:
+ *   image - The QA Image to get bits from.
+ *   start - The first bit position, 0-based.
+ *   end   - The last bit position, inclusive.
+ *   name  - A name for the output image.
+ */
+var getQABits = function(image, start, end, newName) {
+    // Compute the bits we need to extract.
+    // Here we get a pattern full of 1111...
+    var pattern = 0;
+    for (var i = start; i <= end; i++) {
+       pattern += Math.pow(2, i);
+    }
+    return image.select([0], [newName])
+                  .bitwiseAnd(pattern) // &, extracting bits from the QA band.
+                  .rightShift(start); // >>, for positioning in the bitfield.
+};
+
+
+/* Own function created to obtain the quality mask from EVI
+ * If you change the conditions, you can apply it to any QA band of MODIS products.
+ * Args:
+ * image: MOD13A1/Q1 ImageCollection
+ */
+var qualityMaskEVI = function(image)
+{
+  // Extract QA band from MOD13A1/Q1 VI image
+  var QA = image.select('DetailedQA');
+  
+  // Where data quality is inappropiate.
+  var quality = getQABits(QA,0,1,"VI Quality")
+      .expression("b(0) > 1");
+  var usefulness = getQABits(QA,2,5,"VI Usefulness")
+      .expression("b(0) > 5");
+  var possibleShadow = getQABits(QA,15,15,"Possible shadow")
+      .expression("b(0) !== 0");
+  var reliability = image.select('SummaryQA')
+      .expression("b(0) > 1");
+  
+  /* Where data quality is appropiate.
+   * Well, it is the inverse as defined above. */
+  var mask = quality.not()
+      .and(usefulness.not())
+      .and(possibleShadow.not())
+      .and(reliability.not());
+
+  // Returns the mask, 1 = good quality, 0 = bad quality
+  return mask;
+};
+
+
+// Adds mask to image.
+function addMask(evi)
+{
+  return function(image)
+  {
+    return image.addBands(qualityMaskEVI(image).rename('QA_mask'));
+  };
+}
+
+// Adds masked bands to image.
+var addMaskedEVI = function(evi)
+{
+  return function(image)
+  {
+    return image.addBands(image.updateMask(image.select('QA_mask')));
+  };
+};
+
+// MINTATERÜLET MEGADÁSA
+var region = 
+
+
+
+// Hungary border
+var studyArea = ee.FeatureCollection(
+  'ft:1dZPDOjk07VLl6tiGKvcp9zjWnr7i0WNWfMsvKME7',
+  'geometry');
+print(studyArea);
+
+// Create an empty image into which to paint the features, cast to byte.
+var empty = ee.Image().byte();
+
+// Paint all the polygon edges with the same number and width, display.
+var outline = empty.paint({
+  featureCollection: studyArea,
+  color: "black",
+  width: 2
+});
+
+Map.setCenter(19.072, 47.204, 7);
+Map.addLayer(outline, {palette: '000'}, 'Hungary border');
+
+var vizParamsStudyArea = {
+  color: "black",
+  opacity: 0.5,
+  width: 0.5
+};
+
+// Mintaterület megjelenítése
+Map.addLayer(region, vizParamsStudyArea, "Börzsöny");
+
+
+// Parameters for filtering the ImageCollection
+var point = ee.Geometry.Point(19.072, 47.204);
+
+var currentYear = new Date().getFullYear();
+var ev = parseInt(prompt("Add meg az évet 2000 és "
+  +(currentYear-1) + ' között!'), 10);
+var start = ee.Date(ev+'-03-20');
+var finish = ee.Date(ev+'-10-14');
+
+
+// A 250 vagy az 500 m felbontású terméket dolgozzam fel?
+var cellSize = parseInt(prompt(
+  "Az 500 m-es vagy a 250 m-es adatokat dolgozzam fel?"+
+    "(választható: \'250\' vagy \'500\'",
+      500), 10);
+
+var evi=0;
+if(cellSize===500)
+{
+  evi = 'MODIS/MOD13A1';
+  
+}
+else if(cellSize===250)
+{
+  evi = 'MODIS/MOD13Q1';
+}
+else
+{
+  print('Wrong input! Expected input: \'250\' or \'500\'');
+}
+
+var filteredCollection = ee.ImageCollection(evi)
+  .filterBounds(point)
+  .filterDate(start, finish)
+  .map(addMask(evi))
+  .map(addMaskedEVI(evi));
+  
+print(filteredCollection);
+var first = filteredCollection.first();
+print(first);
+var image = ee.Image(first);
+print('Projection, crs, and crs_transform:', image.select(0).projection());
+
+
+/* VÁLASZTHATÓ: 'EVI' VAGY 'NDVI' ÉRTELEMSZERÛEN
+ * A DIAGRAM A CONSOLE ABLAKBAN JELENIK MEG, A JOBB FELSÕ
+ * SAROKBAN LÉVÕ NYÍLRA KELL KATTINTANI, UTÁNA CSV-BE EXPORTÁLÁS
+*/
+/* Melyik indexet számoljam? */
+var mod = prompt("Melyik indexet számoljam?"+
+  "(választható: \'EVI\', \'NDVI\')",
+  "EVI");
+
+var index = '';
+if(mod.toUpperCase()==='EVI')
+{
+  index = 'EVI_1';
+}
+else if(mod.toUpperCase()==='NDVI')
+{
+  index = 'NDVI_1';
+}
+else
+{
+  print('Wrong input! Expected input: \'EVI\', \'NDVI\'');
+}
+
+
+var tsIndex = ui.Chart.image.seriesByRegion(
+  filteredCollection, region, ee.Reducer.median(),index,
+500, 'system:time_start').setOptions({
+          title: index+' Time Series '+ev,
+          vAxis: {title: index},
+});
+print(tsIndex);
+
+
+
+var eviMask = filteredCollection.select(['QA_mask']);
+print(eviMask);
+
+var median = '';
+if(index==='EVI_1')
+{
+  median = filteredCollection.select('EVI_1').median().clip(region);
+}
+else if(index==='NDVI_1')
+{
+  median = filteredCollection.select('NDVI_1').median().clip(region);
+}
+
+// Adds median EVI/NDVI image to Map with a color palette
+Map.addLayer(median.divide(10000), { min: 0.0, max: 1,
+  palette: ['FFFFFF','CC9966','CC9900', '996600', '33CC00',
+'009900','006600','000000']}, 'EVI_masked' );
+
+
+/* Save the image as GeoTIFF
+ * Export to Google Drive
+ */
+
+/* A DRIVE-RA MENTI A MEDIÁNKÉPET
+ * A TASKS FÜLBEN (A CONSOLE MELLETT) A RUN-RA KELL KATTINTANI
+ */
+
+Export.image.toDrive(
+  {
+    image: median,
+    description: index+ev,
+    scale: cellSize,
+    region: region
+  });
+  
+/* END OF SCRIPT */
+
+
+

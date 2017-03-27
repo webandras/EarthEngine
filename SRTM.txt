@@ -1,0 +1,41 @@
+// SRTM Digital Elevation Data Version 4
+
+// Mintaterület poligon.
+var studyArea = /* color: #0B4A8B */ee.Geometry.Polygon(
+        [[[36.9580078125, -2.736203039553932],
+          [36.968994140625, -3.3944359458416313],
+          [37.7490234375, -3.383468830133516],
+          [37.738037109375, -2.725229186665467]]]);
+
+var center = studyArea.centroid();
+print(center);
+Map.setCenter(37.26, -3.08, 12);
+Map.addLayer(studyArea);
+
+// SRTM domborzatmodell betöltése.
+var srtm = 'CGIAR/SRTM90_V4';
+var dem = ee.Image(srtm);
+
+// Vetület, felbontás.
+print('Vetület, crs, és crs_transform:', dem.projection());
+print('Felbontás méterben:', dem.projection().nominalScale());
+
+// A mintaterület kivágása.
+var demClipped = dem.clip(studyArea);
+
+// Megjelenítési beállítások.
+var vizParams = {
+  min: 732,
+  max: 5632,
+};
+
+// Negjelenítés térképen.
+Map.addLayer(demClipped, vizParams, 'srtm_Kilimandzsáró');
+
+// Exportálás.
+Export.image.toDrive({
+  image: demClipped,
+  description: "srtm_Kilimanjaro",
+  scale: 90,
+  region: studyArea
+});
