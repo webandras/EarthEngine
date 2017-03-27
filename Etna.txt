@@ -28,12 +28,11 @@ var getDaysInMonth = function(year, month)
   return (daysInMonth);
 };
 
-
-
-
 /* Kitörölt rész! */
 
-var center = etnaArea.centroid();
+
+
+var center = studyArea.centroid();
 print(center);
 
 /* Sets the map view to the center of the study area */
@@ -59,7 +58,7 @@ var vh = sentinel1
   .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
   // Filter to get images collected in interferometric wide swath mode.
   .filter(ee.Filter.eq('instrumentMode', 'IW'))
-  .filterBounds(etnaArea)
+  .filterBounds(studyArea)
   .filterDate(start, finish);
 
 // Filter to get images from different look angles.
@@ -73,7 +72,7 @@ var composite = ee.Image.cat([
   vhDescending.select('VV').mean()
 ]).focal_median();
 
-var clipped = composite.clip(etnaArea);
+var clipped = composite.clip(studyArea);
 // Display as a composite of polarization and backscattering characteristics.
 Map.addLayer(clipped,{min: [-25, -20, -25], max: [0, 10, 0]}, 'composite');
 
@@ -84,7 +83,6 @@ Export.image.toDrive(
 {
     image: clipped,
     description: 'Sentinel'+year+month+'Etna',
-    //description: 'Sentinel'+year+'2016',
     scale: 10,
     region: studyArea
 });*/
