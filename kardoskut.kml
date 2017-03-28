@@ -10,7 +10,7 @@
 	<ExtendedData><SchemaData schemaUrl="#kardoskut">
 		<SimpleData name="id">1</SimpleData>
 	</SchemaData></ExtendedData>
-      <Polygon><altitudeMode>relativeToGround</altitudeMode><outerBoundaryIs><LinearRing><altitudeMode>relativeToGround</altitudeMode><coordinates>20.478299217901377,46.415412528826664 20.725372746216312,46.412015850825796 20.729287994385277,46.537930552752506 20.481637904390862,46.541335079918504 20.478299217901377,46.415412528826664</coordinates></LinearRing></outerBoundaryIs></Polygon>
+      <Polygon><altitudeMode>relativeToGround</altitudeMode><outerBoundaryIs><LinearRing><altitudeMode>relativeToGround</altitudeMode><coordinates>20.478298700194685,46.415411498646009 20.72537251914628,46.412014817376686 20.729287771406664,46.537929670294091 20.481637389424701,46.54133420074362 20.478298700194685,46.415411498646009</coordinates></LinearRing></outerBoundaryIs></Polygon>
   </Placemark>
 </Folder>
 </Document></kml>
