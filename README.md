@@ -7,7 +7,8 @@ These tutorials are available **in Hungarian only**! I may translate the comment
 ## Content
 
 1. First tutorial for beginners: *tutorial1.js* [See my blogpost](http://www.newgeographer.com/tudomany/2017/08/07/google_earth_engine_01.html)
-2. Second tutorial for beginners *tutorial2.js*
+2. Second tutorial for beginners: *tutorial2.js*
+3. Third tutorial for beginners: *tutorial3.js*
 
 ## Contact information
 
