@@ -7,7 +7,7 @@
  * Hozzá is szólhattok a Disquis rendszeren keresztül.
  * 
  * Szerző: Gulácsi András
- * Dátum: 2017-08-05
+ * Dátum: 2017-08-21
  * GitHub: https://github.com/SalsaBoy990/EarthEngine
  * E-mail: guland@protonmail.com
  */
